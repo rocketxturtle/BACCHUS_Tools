@@ -15,10 +15,11 @@ Step 5: open stellar_parameters.tab (e.g., <code>vim stellar_parameters.tab</cod
   
   <star_name>\t<path_to_spectrum>\t<Teff_init>\t<logg_init>\t<[M/H]_init>\t<vmic_init (-99 if unknown) >\t<convolution_init>\t<rv_init (MUST BE 0 since spectrum must be rv-corrected) >
 
+  WHERE \t IS LITERALLY A TAB
+
 Step 6: (my preferred method) Start an iPython instance (type <code>ipython</code>)
 
 Step 7: import your functions:
-
 <code>
 import sys
 sys.path.append("/path/to/BACCHUS_Tools")
@@ -26,14 +27,27 @@ import bacchus_tools as b
 </code>
 
 Step 8: let's get the stellar parameters for a star that you named "star" in stellar_parameters.tab:
-
 <code>
 b.get_star_param(star)
 </code>
 
-Step 9: let's get its abundances in Fe, Mg, and Nd:
+
+Step 9: let's iterate on the stellar parameters until they converge (giving up after 10 attempts)
+<code>
+for i in range(10):
+&emsp; b.redo_if_necessary(star)
+</code>
+
+Step 10: let's get the star's abundances in Fe, Mg, and Nd:
 <code>
 b.get_abund(star, elements=['Fe', 'Mg', 'Nd'])
+</code>
+
+Step 11: now, let's get differential stellar parameters for star2 with respect to star to get differential stellar parameters (see, e.g., Yong et al. 2023).  First edit stellar_parameters.tab to include info for star2, and then run:
+<code>
+b.run_star_diff(star2, star)
+for i in range(10):
+&emsp; b.redo_diff_if_necessary(star2, star)
 </code>
 
 COMING SOON: making summary result tables
