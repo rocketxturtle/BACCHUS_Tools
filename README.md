@@ -43,7 +43,7 @@ for i in range(10):
 b.get_abund(star, elements=['Fe', 'Mg', 'Nd'])
 </code>
 
-<b>Step 11:</b> now, let's get differential stellar parameters for star2 with respect to star to get differential stellar parameters (see, e.g., Yong et al. 2023).  First edit stellar_parameters.tab to include info for star2, and then run:
+<b>Step 11:</b> now, let's get differential stellar parameters for star2 with respect to star (see, e.g., Yong et al. 2023).  First edit stellar_parameters.tab to include info for star2, and then run:
 <code>
 b.run_star_diff(star2, star)
 for i in range(10):
