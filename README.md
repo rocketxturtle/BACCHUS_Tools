@@ -43,7 +43,7 @@ for i in range(10):
 b.get_abund(star, elements=['Fe', 'Mg', 'Nd'])
 </code>
 
-<b>Step 11:</b> now, let's extract all the abundances and produce some summary tables:
+<b>Step 11:</b> now, let's extract all the abundances and produce some summary tables (saves tables in a few new files):
 <code>
 b.get_bracket_abunds(star)
 </code>
@@ -55,7 +55,7 @@ for i in range(10):
 &emsp; b.redo_diff_if_necessary(star2, star)
 </code>
 
-<b>Step 13:</b> finally, let's perform a line-by-line differential abundance analysis of star2 against star and get out abundance differences between the two stars in each line:
+<b>Step 13:</b> finally, let's compile the line-by-line differential abundances of star2 against star into a table (saves as new file):
 <code>
 r.get_diff(star, BACCHUS_DIR, star2, BACCHUS_DIR)
 </code>
