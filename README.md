@@ -43,11 +43,19 @@ for i in range(10):
 b.get_abund(star, elements=['Fe', 'Mg', 'Nd'])
 </code>
 
-<b>Step 11:</b> now, let's get differential stellar parameters for star2 with respect to star (see, e.g., Yong et al. 2023).  First edit stellar_parameters.tab to include info for star2, and then run:
+<b>Step 11:</b> now, let's extract all the abundances and produce some summary tables:
+<code>
+b.get_bracket_abunds(star)
+</code>
+
+<b>Step 12:</b> now, let's get differential stellar parameters for star2 with respect to star (see, e.g., Yong et al. 2023).  First edit stellar_parameters.tab to include info for star2, and then run:
 <code>
 b.run_star_diff(star2, star)
 for i in range(10):
 &emsp; b.redo_diff_if_necessary(star2, star)
 </code>
 
-COMING SOON: making summary result tables
+<b>Step 13:</b> finally, let's perform a line-by-line differential abundance analysis of star2 against star and get out abundance differences between the two stars in each line:
+<code>
+r.get_diff(star, BACCHUS_DIR, star2, BACCHUS_DIR)
+</code>
