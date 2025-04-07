@@ -8,7 +8,6 @@ import glob
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import time
-import report_bacchus_abunds as r
 from astropy.stats import sigma_clip
 import scipy
 from scipy.interpolate import interp1d
