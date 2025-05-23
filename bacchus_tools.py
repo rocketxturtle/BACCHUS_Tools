@@ -770,4 +770,175 @@ def get_bracket_abunds(object, lineselection = None, trust_flags = True, path=BA
     #print('wrote to ', path+object+'/{}_bracket_abunds_summary.txt'.format(object))
     big_t.write(path+object+'/{}_all_abunds.txt'.format(object), format='ascii', overwrite=True)
 
+#####
+
+def get_synth_bounds_(star,element,guess,steps = []):
+    os.chdir(BACCHUS_DIR)
+    par_path = '{}/{}.par'.format(star,star)
+
+    s = Table.read("solabu.dat", format='ascii')
+    keys = list(np.array(s['col1']))
+    values = list(np.array(s['col2']))
+    sol_abund_dict = dict(zip(keys, values))
+
+    solar_fe = sol_abund_dict[element]
+    try:
+        x_h = 10**(element) * solar_fe
+
+        if len(steps) == 0:
+            steps = [-0.3,-0.15,0,0.15,0.3]
+        string = ''
+        for i in range(len(steps)):
+            if i < len(steps) - 1:
+                string = string + str(np.round(x_h[0] + steps[i],2)) + ' '
+            else:
+                string = string + str(np.round(x_h[0] + steps[i],2))
+        return 0, string
+    except:
+        print('No element abundance!')
+        return 1, 'No element abundance!'
+
+def update_par(star,element,value):
+    os.chdir(BACCHUS_DIR)
+    par_path = '{}/{}.par'.format(star,star)
+
+    s = Table.read("solabu.dat", format='ascii')
+    keys = list(np.array(s['col1']))
+    values = list(np.array(s['col2']))
+    sol_abund_dict = dict(zip(keys, values))
+
+    solar_fe = sol_abund_dict[element]
+    column = element.lower() + '_h'
+    try:
+        x_h = 10**(params[column]) * solar_fe
+
+        with open(par_path,"a") as f:
+            if np.isfinite(x_h[0])==True:
+                line = 'set {0} = {1:.2f}\n'.format(element,x_h[0])
+                f.write(line)
+        f.close()
+    except:
+        print('No element abundance!')
+
+#USE ONLY FOR ITERATING BACCHUS.EQW OR BACCHUS.PARAM
+def reset_directory(star_name, elems = []):
+    os.chdir(bacchus_path + star_name + '/')
+    if len(elems) == 0:
+        elems = ['Fe','Si']
+    for i in elems:
+        label = "{}*".format(i)
+        for fl in glob.glob(label):
+            os.remove(fl)    
+    for fl in glob.glob(star_name + "-*"):
+        os.remove(fl)
+
+    print('#########################################')
+    print('Directory has been reset...')
+    print('#########################################\n')
+
+def update_init(teff,logg,met,vmicro,conv,snr):
+    os.chdir(BACCHUS_DIR)
+    with open("init.com") as file:
+        init = file.readlines()
+        print(init[18]) #SNR
+        print(init[21]) #SPH
+        print(init[61]) #alllines_list
+        print(init[62]) #Teff
+        print(init[63]) #logg
+        print(init[64]) #met
+        print(init[65]) #vmicro
+        print(init[66]) #conv
+        
+        print("updating init.com...")
+        
+        if logg < 3.0:
+            init[21] = 'set SPH = T\n'
+        else:
+            init[21] = 'set SPH = F\n'
+
+        init[18] = 'set SNR = "{}"\n'.format(snr)
+        init[62] = 'set TEFFunknown = "{}"\n'.format(teff)
+        init[63] = 'set LOGGunknown = "{}"\n'.format(logg)
+        init[64] = 'set METALLICunknown = "{}"\n'.format(met)
+        init[65] = 'set TURBVELunknown = "{}"\n'.format(vmicro)
+        init[66] = 'set CONVOLunknown = "{}"\n'.format(conv)
+
+        print()
+        print(init[18]) #SNR
+        print(init[21]) #SPH
+        print(init[61]) #alllines_list
+        print(init[62]) #Teff
+        print(init[63]) #logg
+        print(init[64]) #met
+        print(init[65]) #vmicro
+        print(init[66]) #conv
+    file.close()
+    
+    with open("init.com", "w") as file:
+        file.writelines(init)
+    file.close()
+
+def load_parameters(star):
+    os.chdir(BACCHUS_DIR)
+    subprocess.call(['load_parameters.com',star])
+
+def get_convolution(star):
+    os.chdir(BACCHUS_DIR)
+    subprocess.call(['bacchus.eqw',star,'Si'])
+    # subprocess.call(['bacchus.eqw',star,'O'])
+
+def get_eqw(star,el):
+    os.chdir(BACCHUS_DIR)
+    subprocess.call(['bacchus.eqw',star,el])
+
+def get_line_abundance(star,element,line):
+    os.chdir(BACCHUS_DIR)
+    filepath = '/{}/{}_all_abunds.txt'.format(star,star)
+    return_chi2_value = -9999.99
+    return_int_value = -9999.99
+    return_eqw_value = -9999.99
+    
+    with open(filepath) as file:
+        init = file.readlines()
+        for i in init:
+            array = i.split(' ')
+            if array[0] == element and float(array[1]) == line:
+                return_chi2_value = float(array[2])
+                return_int_value = float(array[7])
+                return_eqw_value = float(array[8])
+                # display(init[0])
+                # display(array)
+                # return_value = float(array[2])
+    file.close()
+    return return_chi2_value,return_int_value,return_eqw_value
+
+def get_windows(element):
+    with open(b_path + "elements.wln") as file:
+        init = file.readlines()
+        for i in init:
+            array = i.split(' ')
+            try:
+                array = i.split(' ')
+                if array[1]==element:
+                    windows = []
+                    for j in array[2:len(array)]:
+                        if j != '' and j != '\n':
+                            windows.append(np.round(float(j),1))
+                    return windows
+            except:
+                pass
+
+def create_linked_bacchus_directory(new_filename, base_directory):
+    subprocess.run(["cd",".."])
+    subprocess.run(["mkdir",new_filename])
+    subprocess.run(["cd",base_directory])
+    
+    subprocess.run(["rsync", "-aP","--exclude=bacchus_v70_models.tar","--exclude=input_files","--exclude=models","{}/*".format(og_bacchus),base_directory]) 
+
+    dirs = ['bacchus_v70_models.tar','input_files','models']
+
+    for i in dirs:
+        og_file = "../{}/".format(base_directory) + i
+        link = new_filename + '/' + i
+        subprocess.run(["ln","-s",base_directory,link])
 
