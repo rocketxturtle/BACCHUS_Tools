@@ -1,18 +1,18 @@
 import subprocess
-# import sys
+import sys
 import os
-# import logging
+import logging
 from astropy.table import Table
 import numpy as np
 import glob
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import time
-# import report_bacchus_abunds as r
-# from astropy.stats import sigma_clip
+from astropy.stats import sigma_clip
 import scipy
 from scipy.interpolate import interp1d
-# from scipy import interpolate
+from scipy import interpolate
+
 
 
 BACCHUS_DIR = "/mnt/Primary/astroHome/nmyers/BACCHUS_v70_fordistribution/"
