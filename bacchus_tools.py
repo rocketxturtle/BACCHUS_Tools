@@ -1,22 +1,22 @@
 import subprocess
-import sys
+# import sys
 import os
-import logging
+# import logging
 from astropy.table import Table
 import numpy as np
 import glob
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import time
-import report_bacchus_abunds as r
-from astropy.stats import sigma_clip
+# import report_bacchus_abunds as r
+# from astropy.stats import sigma_clip
 import scipy
 from scipy.interpolate import interp1d
-from scipy import interpolate
+# from scipy import interpolate
 
 
-BACCHUS_DIR = "/home/catherine-manea/Software/BACCHUS_v70_fordistribution/"
-
+BACCHUS_DIR = "/mnt/Primary/astroHome/nmyers/BACCHUS_v70_fordistribution/"
+# BACCHUS_DIR = "/Users/nmyers/dissertation/keck_IAU_results"
 def retrieve_star_params(star):
     par = Table.read(BACCHUS_DIR+"{}/best_parameters.tab".format(star), format='ascii')
     par2 = Table.read(BACCHUS_DIR+"{a}/{b}.par".format(a=star, b=star), format='ascii', data_start=0)
@@ -41,6 +41,7 @@ def retrieve_star_params(star):
         return np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
 
 def faux_best_parameters(ref):
+    print(BACCHUS_DIR+'/'+ref+'/'+ref+'.par')
     with open(BACCHUS_DIR+'/'+ref+'/'+ref+'.par') as pars:
         lines = pars.readlines()
     pars.close()
@@ -216,8 +217,10 @@ def redo_param(star):
         except:
             pass
     os.rmdir(str(star)+"/models")
-    os.rmdir(str(star))
-    
+    try:
+        os.rmdir(str(star))
+    except:
+        pass 
     print("Redoing ", star)
     get_star_param(star)
     return 0
@@ -331,7 +334,9 @@ def redo_program_stars_param(targ_table, niter=2):
                 pass
     return 0
 
-def get_abund(star, elements = ['Li', 'C', 'N', 'O', 'Mg', 'Si', 'Ca', 'Na', 'Al', 'Sc', 'Ti', 'V', 'Cr', 'Mn',  'Co', 'Ni', 'Cu','Zn', 'Zr', 'Sr', 'Y',  'Ba', 'La', 'Ce', 'Nd', 'Sm', 'Eu', 'Fe']):
+def get_abund(star, elements = [ "Mo", "Ru", "Gd", "Dy", "Yb", 'Li', 'C', 'N', 'O', 'Mg', 'Si', 'S',
+                                 'Ca', 'Na', 'Al', 'Sc', 'Ti', 'V', 'Cr', 'Mn',  'Co', 'Ni', 'Cu', 'K',
+                                 'Zn', 'Zr', 'Sr', 'Y',  'Ba', 'La', 'Ce', 'Nd', 'Sm', 'Eu', 'Fe']):
     print(elements)
     redo = False
     try:
@@ -350,35 +355,65 @@ def get_abund(star, elements = ['Li', 'C', 'N', 'O', 'Mg', 'Si', 'Ca', 'Na', 'Al
             subprocess.call(['bacchus.abund',star,el])
     else:
         print("parameters did not converge. not doing bacchus.abund")
-    # elements = ['Li', 'C', 'N', 'O', 'Na', 'Mg', 'Al', 'Si', 'S', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Sr', 'Y', 'Zr', 'Ba', 'La', 'Ce', 'Nd', 'Sm', 'Eu', 'Yb']
-    
 
-def build_abund_sensitivity_stars(ref):
+
+def build_abund_sensitivity_stars(ref, elements = ["Fe", "Ru", "Gd", "Dy", "Yb", 'Li', 'C',
+                                                   'N', 'O', 'Mg', 'Si', 'Ca', 'Na', 'Al', 'Sc',
+                                                   'Ti', 'V', 'Cr', 'Mn',  'Co', 'Ni', 'Cu','Zn',
+                                                   'Zr', 'Sr', 'Y',  'Ba', 'La', 'Ce', 'Nd', 'Sm',
+                                                   'Eu', 'Mo']):
+    '''
+    Understand the sensitivity of your abundances to changing stellar parameters Teff, logg, [Fe/H], and microturbulence. 
+    "ref" is any star that you have already run through BACCHUS and got best fit Teff, logg, [Fe/H], and microturbulence 
+    values.  "ref" should be representative of the typical star in your sample with typical parameter uncertainties.
+    This function loads up 8 new instances of "ref" where all stellar parameters are the same as the original "ref" 
+    except for one stellar parameter, which is perturbed +/- the relevant stellar parameter uncertainty. 
+
+    So, for example, for Teff, 2 new objects called "ref_teffp{TEFF_UNCERTAINTY}"
+    and "ref_teff-{TEFF_UNCERTAINTY}" will be created. For each object, this function
+    will interpolate a model atmosphere that assumes the same logg, [Fe/H], and microturbulence as
+    the original ref except it has a Teff value that was perturbed by + and - the Teff uncertainty.
+    BACCHUS will then adopt this new stellar atmosphere and original ref spectrum and measure 
+    abundances for all elements specified above.  In the end, you will end up with 8 new BACCHUS objects where
+    each object represents the original "ref" object except each one has abundances measured assuming different
+    stellar atmospheres where just one parameter was perturbed by the uncertainty. This function only needs
+    to be run for a few stars with representative stellar parameter uncertainties.
+    '''
     teff, eteff, logg, elogg, met, emet, mic, emic, convol, spec = retrieve_star_params(ref)
-    if elogg > .1:
-        elogg = .1
-    update_star_param_file(ref, spec, teff, logg, met, mic, convol, 0)
+
     upteff = ref+"_teffp"+str(eteff)
     update_star_param_file(upteff, spec, teff+eteff, logg, met, mic, convol, 0)
+
     downteff = ref+"_teff-"+str(eteff)
     update_star_param_file(downteff, spec, teff-eteff, logg, met, mic, convol, 0)
+
     upg = ref+"_loggp"+str(elogg)
     update_star_param_file(upg, spec, teff, logg+elogg, met, mic, convol, 0)
     downg = ref+"_logg-"+str(elogg)
     update_star_param_file(downg, spec, teff, logg-elogg, met, mic, convol, 0)
+
     upm = ref+"_mhp"+str(emet)
     update_star_param_file(upm, spec, teff, logg, met+emet, mic, convol, 0)
     downm = ref+"_mh-"+str(emet)
     update_star_param_file(downm, spec, teff, logg, met-emet, mic, convol, 0)
+
     upvmic = ref+"_vmicp"+str(emic)
     update_star_param_file(upvmic, spec, teff, logg, met, mic+emic, convol, 0)
     downvmic = ref+"_vmic-"+str(emic)
     update_star_param_file(downvmic, spec, teff, logg, met, mic-emic, convol, 0)
-    for x in [upteff, downteff, upg, downg, upm, downm, upvmic, downvmic]:
-        subprocess.call(['load_parameters.com',x])
+
     for star in [upteff, downteff, upg, downg, upm, downm, upvmic, downvmic]:
+        print("loading parameters:")
+        print('load_parameters.com',star)
+        subprocess.call(['load_parameters.com',star])
+
+        print("Running: ", star)
         faux_best_parameters(star)
-        get_abund(star)
+        print("getting abundance")
+        # get_abund(star, elements=elements)
+        make_bracket_abund_table(star)
+        get_bracket_abunds(star)
+
 
 def extract_abunds(object, sub=None):
     print("Producing abundance summary for ", object)
@@ -602,13 +637,15 @@ def extract_abunds(object, path=BACCHUS_DIR+'/'):
             print("Couldn't open file ", af)
             pass
     big_t = Table([all_els, all_lines, all_abunds, all_flags, all_syn_flags, all_eqw_flags, all_int_flags, all_int_abunds, all_eqw_abunds], names=('Element', 'Line', 'A', 'Flag', 'SynFlag', 'EqFlag', 'IntFlag', 'IntAbund', 'EqwAbund'))
+    # print(big_t)
+    # print(path+object+'/all_A_abunds.txt')
     big_t.write(path+object+'/all_A_abunds.txt', format='ascii', overwrite=True)
     return big_t
 
-def make_bracket_abund_table(object, lineselection = None, path=BACCHUS_DIR+'/'):
+def make_bracket_abund_table(object, lineselection = None, path=BACCHUS_DIR+'/',write_path = None):
     if lineselection is not None:
-        lineselect = Table.read(lineselection, format='ascii')
-        #print(lineselect)
+        lineselect = Table.read(lineselection, format='ascii.csv')
+        # print(lineselect)
     big_t = extract_abunds(object, path)
     big_t['x_h'] = 10**(big_t['A'] - 12)
     s = Table.read(BACCHUS_DIR+'/'+"solabu.dat", format='ascii')
@@ -629,24 +666,35 @@ def make_bracket_abund_table(object, lineselection = None, path=BACCHUS_DIR+'/')
         good = np.where((big_t['Element'] == el) & (big_t['Flag'] == 1) & (big_t['SynFlag'] == 1) & (big_t['EqFlag'] == 1) & (big_t['IntFlag'] == 1))
         if lineselection is not None:
             for g in good[0]:
-                if big_t['Line'][g] in lineselect['col2']:
+                # print(big_t['Line'][g])
+                if big_t['Line'][g] in lineselect['line']:
                     big_t['Used?'][g] = True
+                # else:
+                #     big_t['Used?'][g] = False
         else:
             big_t['Used?'][good] = True
     #print(big_t.colnames)
     big_t.write(path+object+'/{}_all_abunds.txt'.format(object), format='ascii', overwrite=True)
-    #print('wrote to ', path+object+'/{}_all_abunds.txt'.format(object))
+    if write_path is not None:
+        big_t.write('{}/{}_all_abunds.txt'.format(write_path,object), format='ascii', overwrite=True)
+    print('wrote to ', path+object+'/{}_all_abunds.txt'.format(object))
 
-def get_bracket_abunds(object, lineselection = None, trust_flags = True, path=BACCHUS_DIR+'/'):
+def get_bracket_abunds(object, lineselection = None, trust_flags = True, path=BACCHUS_DIR+'/',write_path = None):
     if trust_flags == True:
+        print("running make_bracket_abund_table")
         make_bracket_abund_table(object, lineselection, path)
-    t_sum = Table(names=('Abund', 'Mean', 'Std Dev', 'Std Err'), dtype=(str, 'f4', 'f4', 'f4'))
+    t_sum = Table(names=('Abund', 'A_mean', 'A_std','A_stderr', 'Mean', 'Std Dev', 'Std Err'),
+                  dtype=(str, 'f4', 'f4', 'f4','f4', 'f4', 'f4'))
+
     big_t = Table.read(path+object+'/{}_all_abunds.txt'.format(object), format='ascii')
     good_fe = np.where((big_t['Used?'] == 'True') & (big_t['Element'] == 'Fe'))
     mean_fe_h = np.nanmedian(big_t['[X/H]'][good_fe])
     std_fe_h = np.nanstd(big_t['[X/H]'][good_fe])
     num_lines_fe = np.sqrt(len(big_t['[X/H]'][good_fe]))
-    t_sum.add_row(['[Fe/H]', mean_fe_h, std_fe_h, std_fe_h/num_lines_fe])
+    A_mean_fe_h = np.nanmedian(big_t['A'][good_fe])
+    A_std_fe_h = np.nanstd(big_t['A'][good_fe])
+    A_num_lines_fe = np.sqrt(len(big_t['A'][good_fe]))
+    t_sum.add_row(['[Fe/H]', A_mean_fe_h, A_std_fe_h, A_std_fe_h/A_num_lines_fe, mean_fe_h, std_fe_h, std_fe_h/num_lines_fe])
     #print("[Fe/H] = ", mean_fe_h, ' +/- ', std_fe_h/num_lines_fe)
     big_t['[X/Fe]'] = big_t['[X/H]'] - mean_fe_h
     for el in set(big_t['Element']):
@@ -655,10 +703,13 @@ def get_bracket_abunds(object, lineselection = None, trust_flags = True, path=BA
         mean_x_h = np.nanmedian(big_t['[X/H]'][good])
         std_x_fe = np.nanstd(big_t['[X/Fe]'][good])
         num_lines_x_fe = np.sqrt(len(big_t['[X/Fe]'][good]))
+        A_mean_x = np.nanmedian(big_t['A'][good])
+        A_std_x = np.nanstd(big_t['A'][good])
+        A_num_lines_x = np.sqrt(len(big_t['A'][good]))
         #print("[{}/Fe] = ".format(el), mean_x_fe, ' +/- ', std_x_fe/num_lines_x_fe)
         if el != 'Fe':
-            t_sum.add_row(["[{}/Fe]".format(el), mean_x_fe, std_x_fe, std_x_fe/num_lines_x_fe])
-            t_sum.add_row(["[{}/H]".format(el), mean_x_h, 0, 0])
+            t_sum.add_row(["[{}/Fe]".format(el),  A_mean_x, A_std_x, A_std_x/A_num_lines_x, mean_x_fe, std_x_fe, std_x_fe/num_lines_x_fe])
+            t_sum.add_row(["[{}/H]".format(el), 0, 0, 0,mean_x_h, 0, 0])
 
     s = Table.read(BACCHUS_DIR+'/'+"solabu.dat", format='ascii')
     #print(s)
@@ -682,20 +733,41 @@ def get_bracket_abunds(object, lineselection = None, trust_flags = True, path=BA
     #t_sum.add_row(["Mg/Si", mg_si, 0, 0])
     #t_sum.add_row(["C/O", c_o, 0, 0])
     par = Table.read(path+"{}/best_parameters.tab".format(object), format='ascii')
-    try:
-        line = np.where(par['conv'] == 1)[0][0]-1
+    # try:
+    if len(par['conv']) > 1:
+        line = np.where(par['conv'] == 1)[0][0] -1
         teff = par['Teff'][line]
         eteff = par['err'][line]
         logg = par['logg'][line]
         elogg = par['err_1'][line]
-        met = par['met'][line+1]
-        emet = par['err_2'][line+1]
-        t_sum.add_row(["Teff", teff, 0, eteff])
-        t_sum.add_row(["logg", logg, 0, elogg])
-        t_sum.add_row(["z", met, 0, emet])
-    except:
-        pass#print(object, "params didn't actually converge?")
+        met = par['met'][line]
+        emet = par['err_2'][line]
+        chi = par['xit'][line]
+        echi = par['err_3'][line]
+    elif len(par['conv']) == 1:
+        line = np.where(par['conv'] == 1)[0][0]
+        teff = par['initTeff'][line]
+        eteff = par['err'][line]
+        logg = par['initlogg'][line]
+        elogg = par['err_1'][line]
+        met = par['initmet'][line]
+        emet = par['err_2'][line]
+        chi = par['initxit'][line]
+        echi = par['err_3'][line]
+
+    t_sum.add_row(["Teff", 0, 0, 0, teff, 0, eteff])
+    t_sum.add_row(["logg", 0, 0, 0, logg, 0, elogg])
+    t_sum.add_row(["z", 0, 0, 0, met, 0, emet])
+    t_sum.add_row(["x", 0, 0, 0, chi, 0, echi])
+    # except:
+    #     pass#print(object, "params didn't actually converge?")
     #print(t_sum)
+    # print(t_sum)
+    # print(path, object, )
     t_sum.write(path+object+'/{}_bracket_abunds_summary.txt'.format(object), format='ascii', overwrite=True)
+    if write_path is not None:
+        t_sum.write('{}/{}_bracket_abunds_summary.txt'.format(write_path,object), format='ascii', overwrite=True)
     #print('wrote to ', path+object+'/{}_bracket_abunds_summary.txt'.format(object))
     big_t.write(path+object+'/{}_all_abunds.txt'.format(object), format='ascii', overwrite=True)
+
+
