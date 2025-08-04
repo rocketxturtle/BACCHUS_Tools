@@ -1,2 +1,6 @@
 kuiper........................ is hungry
+<<<<<<< HEAD
 and wants food now. hello.
+=======
+and wants food now.
+.....
